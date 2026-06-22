@@ -6,8 +6,8 @@ author: Nemocccc
 license: MIT
 metadata:
   hermes:
-    tags: [news, daily-digest, rss, tech, ai, web-search]
-    related_skills: [skill-creator]
+    tags: [news, daily-digest, rss, tech, ai]
+    homepage: https://github.com/Nemocccc/KeepMeUpdate
 ---
 
 # KeepMeUpdate — 每日科技新闻摘要 / Daily Tech Digest
@@ -29,6 +29,8 @@ metadata:
 ### Step 0: 配置交互
 
 **持久化方案**：用户配置写入 `{skill_dir}/user_config.yaml`，不依赖 agent 上下文和 memory。
+
+> 关于交互配置模式的设计思路和复用方法，参见 `references/config-flow.md`。
 
 ```yaml
 # user_config.yaml 示例
@@ -104,7 +106,7 @@ python3 {skill_dir}/scripts/rss_fetch.py
 >
 > ⚠️ **URL 可能已过时**：缓存中的 URL 路径可能在发布后发生变化（slug 被编辑、站点迁移、文章下架）。Ars Technica、DeepMind、TechCrunch 等源尤其常见。Step 5 生成导读时应基于 RSS 的 `title` 和 `summary` 字段，不要依赖 URL 中的文字来推断新闻内容。Step 6.5 会做全量 HTTP 验证捕获失效链接。
 
-> **arXiv 延迟**: arXiv cs.AI 源首次抓取常返回 `count: 0`，同天稍后重试会正常。如 `arxiv_retry: true` 且 `total_articles` < 50，建议重新拉取一次（脚本会自动跳过已读文章，通过 `seen_guids.json` 跟踪）。各源已知问题见 `{skill_dir}/references/feed-behavior.md`。
+> **arXiv 延迟**: arXiv cs.AI 源首次抓取常返回 `count: 0`，同天稍后重试会正常。如 `arxiv_retry: true` 且 `total_articles` < 50，建议重新拉取一次（脚本会自动跳过已读文章，通过 `seen_guids.json` 跟踪）。
 
 #### 空结果处理
 
@@ -370,53 +372,9 @@ python3 {skill_dir}/scripts/verify_links.py <filepath>
 - 非 200 且非付费墙的链接判定为断裂，退出码非零
 - 内建站点超时差异化（github/arxiv/patreon 给 15s，其余 10s）
 
-如果没有脚本（全新检出），也可以用内联代码：
-
-```python
-import urllib.request, ssl, re
-
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-
-PAYWALL_DOMAINS = ('bloomberg.com', 'reuters.com', 'ft.com', 'wsj.com',
-                    'economist.com', 'barrons.com', 'nytimes.com',
-                    'extremetech.com')
-content = open(filepath).read()
-urls = set(re.findall(r'https?://[^\s\)\[\]》]+', content))
-
-for url in sorted(urls):
-    try:
-        r = urllib.request.urlopen(urllib.request.Request(url), timeout=10, context=ctx)
-        if r.status != 200:
-            if r.status in (401, 403) and any(d in url for d in PAYWALL_DOMAINS):
-                print(f"⚠️  PAYWALL {url[:70]}")
-                continue
-            raise ValueError(f"HTTP {r.status} for {url}")
-    except ValueError:
-        raise
-    except Exception as e:
-        print(f"BROKEN: {url} — {e}")
-        raise
-
-if len(urls) != len(set(u.lower() for u in urls)):
-    raise ValueError("Duplicate URLs — different entries sharing same link")
-```
-
-> ⚠️ **常见失败模式**：RSS 缓存的 URL 可能因 slug 变更、站点迁移或文章下架而 404。Ars Technica、DeepMind Blog、TechCrunch 尤其容易有 slug 变化。验证失败的链接必须回 RSS 缓存跨源匹配正确 URL（同一标题可能在另一个 feed 中有不同路径），无法匹配则移除整条新闻。宁可漏不可假。
+> ⚠️ **常见失败模式**：RSS 缓存的 URL 可能因 slug 变更、站点迁移或文章下架而 404。验证失败的链接必须回 RSS 缓存跨源匹配正确 URL（同一标题可能在另一个 feed 中有不同路径），无法匹配则移除整条新闻。
 >
 > 触发 `raise` 后流程立即中止，必须先修复或移除断裂链接后重新验证。不得在验证失败的情况下交付摘要。
->
-> 此验证也天然覆盖了 Lobsters 短链接等虚构 URL——任何 404 都会被拦截，无论看起来多像真实 URL。
-
-#### 断裂链接恢复流程
-
-验证发现断裂链接后，按以下顺序尝试修复：
-
-1. **回 RSS 缓存跨源匹配** — 同一标题可能同时出现在多个 feed（如 HN + Ars），不同 feed 的 slug 可能不同。搜索 `articles_YYYY-MM-DD.json` 中标题关键词，提取目标 feed 的 URL。
-2. **web_search 重搜** — 用标题核心关键词搜索，提取真实 URL（注意解析 `uddg=` 参数）。
-3. **移除条目** — 以上都无法验证则整条删除。**不得保留无链接或假链接的条目。**
-4. **付费墙域名** — 如果 URL 正确（来自可信 RSS 源、标题匹配）但返回 401/403，将域名加入 `verify_links.py` 的 `PAYWALLED_DOMAINS` 集合，然后标明"访问受限"保留。这是永久性修复——该域名的后续自动请求都会走警告而非阻断路径。
 
 ---
 
@@ -462,6 +420,8 @@ if len(urls) != len(set(u.lower() for u in urls)):
 
 这些规则不依赖配置，是技能的核心质量标准。
 
+> 关于交互配置模式的设计思路和复用方法，参见 `references/config-flow.md`。
+
 ---
 
 ## 文件结构
@@ -469,7 +429,8 @@ if len(urls) != len(set(u.lower() for u in urls)):
 ```
 {skill_dir}/
 ├── SKILL.md                       # 本文件
-├── skill.json                     # ClawHub 发布元数据 / config schema
+├── README.md                      # 用户指引
+├── skill.json                     # ClawHub 元信息
 ├── scripts/
 │   ├── rss_fetch.py               # RSS 抓取引擎（stdlib only）
 │   ├── rss_feeds.default.json     # 默认 28 源列表
@@ -480,7 +441,7 @@ if len(urls) != len(set(u.lower() for u in urls)):
 │   ├── report.zh.md               # 中文输出模板
 │   └── report.en.md               # 英文输出模板
 ├── references/
-│   └── feed-behavior.md           # RSS 源行为记录（arXiv延迟、HN陷阱等）
+│   └── config-flow.md             # 交互配置模式说明
 └── user_config.yaml               # 用户配置（首次交互后生成，.gitignore 排除）
 ```
 

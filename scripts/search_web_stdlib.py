@@ -25,11 +25,7 @@ def _ua():
 
 
 def _ctx():
-    # Don't strictly verify — DDG / many sites have chains that LibreSSL
-    # complains about on macOS. The data is public, low risk.
     c = ssl.create_default_context()
-    c.check_hostname = False
-    c.verify_mode = ssl.CERT_NONE
     return c
 
 
