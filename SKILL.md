@@ -104,7 +104,7 @@ python3 {skill_dir}/scripts/rss_fetch.py
 >
 > ⚠️ **URL 可能已过时**：缓存中的 URL 路径可能在发布后发生变化（slug 被编辑、站点迁移、文章下架）。Ars Technica、DeepMind、TechCrunch 等源尤其常见。Step 5 生成导读时应基于 RSS 的 `title` 和 `summary` 字段，不要依赖 URL 中的文字来推断新闻内容。Step 6.5 会做全量 HTTP 验证捕获失效链接。
 
-> **arXiv 延迟**: arXiv cs.AI 源首次抓取常返回 `count: 0`，同天稍后重试会正常。如 `arxiv_retry: true` 且 `total_articles` < 50，建议重新拉取一次（脚本会自动跳过已读文章，通过 `seen_guids.json` 跟踪）。
+> **arXiv 延迟**: arXiv cs.AI 源首次抓取常返回 `count: 0`，同天稍后重试会正常。如 `arxiv_retry: true` 且 `total_articles` < 50，建议重新拉取一次（脚本会自动跳过已读文章，通过 `seen_guids.json` 跟踪）。各源已知问题见 `{skill_dir}/references/feed-behavior.md`。
 
 #### 空结果处理
 
@@ -123,16 +123,23 @@ python3 {skill_dir}/scripts/rss_fetch.py
 
 **中文模式**（language=zh）：
 ```
-"科技新闻 最新消息 {YYYY}"
-"AI 人工智能 大模型 最新"
-"开源 编程 开发者 最新"
+"AI 人工智能 大模型 最新 2026"
+"科技 数码 硬件 芯片 手机 新能源 汽车 评测"
+"开源 GitHub 编程 开发者工具 框架 语言"
+"互联网 科技公司 融资 IPO 财报 收购"
+"网络安全 数据隐私 漏洞 攻击"
+"机器人 具身智能 自动驾驶 航天 卫星"
 ```
 
 **英文模式**（language=en）：
 ```
-"latest AI news today {YYYY}"
-"tech news trending today"
-"open source developer tools 2026"
+"latest AI news today 2026"
+"tech hardware gadgets chip smartphone EV"
+"open source developer tools programming language framework"
+"cybersecurity data breach vulnerability zero day"
+"startup funding IPO acquisition tech companies"
+"robotics autonomous driving space launch satellite"
+"cloud computing infrastructure devops kubernetes"
 ```
 
 #### DDG 限流时的兜底方案
@@ -140,14 +147,20 @@ python3 {skill_dir}/scripts/rss_fetch.py
 如果 `web_search` 搜索返回空（DDG 被限流），切换到直接抓取知名新闻源首页：
 
 ```bash
-# Hacker News 首页
+# Hacker News 首页（开发者社区最热）
 python3 {skill_dir}/scripts/search_web_stdlib.py "https://news.ycombinator.com" --fetch
 
-# TechCrunch 首页
+# TechCrunch 首页（创业/科技商业）
 python3 {skill_dir}/scripts/search_web_stdlib.py "https://techcrunch.com" --fetch
 
-# Ars Technica 首页
+# Ars Technica 首页（深度科技）
 python3 {skill_dir}/scripts/search_web_stdlib.py "https://arstechnica.com" --fetch
+
+# The Verge 首页（消费电子/科技文化）
+python3 {skill_dir}/scripts/search_web_stdlib.py "https://www.theverge.com" --fetch
+
+# Wired 首页（科技文化/趋势）
+python3 {skill_dir}/scripts/search_web_stdlib.py "https://www.wired.com" --fetch
 ```
 
 > 提取技巧：HN 内容格式为 `序号. 标题 ( 域名 )` + `分数 points by 用户 时间 ago`，可用正则提取。TechCrunch 和 Ars 为文章标题列表。各源 --fetch 一次即可获取完整首页内容，比反复试搜索词更高效。
@@ -456,16 +469,19 @@ if len(urls) != len(set(u.lower() for u in urls)):
 ```
 {skill_dir}/
 ├── SKILL.md                       # 本文件
+├── skill.json                     # ClawHub 发布元数据 / config schema
 ├── scripts/
 │   ├── rss_fetch.py               # RSS 抓取引擎（stdlib only）
-│   ├── rss_feeds.default.json     # 默认 28 源列表（中英文混合）
+│   ├── rss_feeds.default.json     # 默认 28 源列表
 │   ├── search_web_stdlib.py       # web 搜索兜底脚本（stdlib fallback）
 │   ├── tz_offset.py               # 时区偏移计算脚本
 │   └── verify_links.py            # 链接全量验证器（Step 6.5）
 ├── templates/
 │   ├── report.zh.md               # 中文输出模板
 │   └── report.en.md               # 英文输出模板
-└── user_config.yaml               # 用户配置（首次交互后生成）
+├── references/
+│   └── feed-behavior.md           # RSS 源行为记录（arXiv延迟、HN陷阱等）
+└── user_config.yaml               # 用户配置（首次交互后生成，.gitignore 排除）
 ```
 
 ## 依赖
