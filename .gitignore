@@ -1,0 +1,19 @@
+# 用户配置（自动生成，含个人信息）
+user_config.yaml
+
+# 运行时 RSS 源（区别于默认源）
+rss_feeds.json
+
+# 已读文章跟踪
+seen_guids.json
+
+# RSS 缓存目录
+scripts/rss_cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
