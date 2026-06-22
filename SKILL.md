@@ -2,7 +2,7 @@
 name: keep-me-update
 description: "Daily tech/AI/geek news digest powered by RSS + web search. 基于 RSS 和网络搜索的每日科技/AI/极客新闻摘要。触发后先交互配置，再自动生成。"
 version: 1.0.0
-author: Hermes Agent Community
+author: Nemocccc
 license: MIT
 metadata:
   hermes:
