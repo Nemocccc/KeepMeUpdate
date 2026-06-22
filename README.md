@@ -36,9 +36,9 @@ KeepMeUpdate 是一个 Hermes Agent skill。触发后它会：
 
 ```bash
 # 在 Hermes skills 目录下
-git clone https://github.com/<your-org>/keep-me-update.git
+git clone https://github.com/Nemocccc/KeepMeUpdate.git
 # 或直接复制到 skills 目录
-cp -r keep-me-update ~/.hermes/skills/
+cp -r KeepMeUpdate ~/.hermes/skills/keep-me-update
 ```
 
 ### 使用
@@ -142,7 +142,7 @@ keep-me-update/
 
 欢迎：
 
-- 🐛 报告源挂了或链接问题 → [Issues](https://github.com/<your-org>/keep-me-update/issues)
+- 🐛 报告源挂了或链接问题 → [Issues](https://github.com/Nemocccc/KeepMeUpdate/issues)
 - 🌟 推荐新的高质量 RSS 源 → PR 修改 `rss_feeds.default.json`
 - 🌐 改进英文模板 → PR 修改 `templates/report.en.md`
 - 🧪 完善验证脚本 → PR 修改 `scripts/verify_links.py`
