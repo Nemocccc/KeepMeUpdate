@@ -28,34 +28,62 @@ KeepMeUpdate 是一个 Hermes Agent skill。触发后它会：
 
 ### 前置条件
 
-- 安装 [Hermes Agent](https://hermes-agent.nousresearch.com/docs)
+- 安装 [Hermes Agent](https://hermes-agent.nousresearch.com/docs)（这也是一种 AI agent 框架，下面有安装指引）
 - Python 3.9+
 - 网络连接
 
+> 不是 Hermes 用户？往下翻有「非 Hermes 用户」说明。
+
 ### 安装
 
-**方式一：直接复制（推荐，最稳定）**
+**方式一：git clone（推荐）**
 
 ```bash
 git clone https://github.com/Nemocccc/KeepMeUpdate.git
 cp -r KeepMeUpdate ~/.hermes/skills/keep-me-update
-# 在会话中加载
+```
+
+然后在 Hermes 会话中加载：
+
+```bash
 hermes --skills keep-me-update
 ```
 
-**方式二：从 ClawHub 安装（如果网络通）**
+或进入会话后执行 `/reload-skills`。
+
+**方式二：从 ClawHub 安装**
 
 ```bash
 hermes skills install keep-me-update
 ```
 
-**方式三：从 GitHub 原始 URL 安装**
+> ⚠️ `hermes skills install <raw URL>` 方式**不可用**——它只下载 SKILL.md，不会下载 scripts/ 和 templates/ 等依赖文件。请使用 git clone 或 ClawHub 安装。
+
+---
+
+### 非 Hermes 用户
+
+KeepMeUpdate 是一个 **Hermes Agent skill**，它的执行依赖 AI agent 读取 SKILL.md 并按指令调用工具。没有 Hermes 的话，目前无法直接运行。
+
+你可以：
+
+1. **安装 Hermes Agent**（开源免费）
 
 ```bash
-hermes skills install https://raw.githubusercontent.com/Nemocccc/KeepMeUpdate/main/SKILL.md
+curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
 ```
 
-安装后在会话中 `/reload-skills` 即可加载。
+安装后按上面的「方式一」安装 KeepMeUpdate 即可。
+
+2. **使用我们的 RSS 引擎自己定制**
+
+如果只是想要 RSS 抓取能力，`scripts/rss_fetch.py` 是一个独立可用的 Python 脚本，不依赖任何 AI：
+
+```bash
+python3 scripts/rss_fetch.py --feeds scripts/rss_feeds.default.json --skip-read
+```
+
+输出所有文章的 JSON，你可以自己写逻辑处理。
 
 ### 使用
 
