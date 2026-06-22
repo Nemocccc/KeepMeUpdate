@@ -34,12 +34,28 @@ KeepMeUpdate 是一个 Hermes Agent skill。触发后它会：
 
 ### 安装
 
+**方式一：直接复制（推荐，最稳定）**
+
 ```bash
-# 在 Hermes skills 目录下
 git clone https://github.com/Nemocccc/KeepMeUpdate.git
-# 或直接复制到 skills 目录
 cp -r KeepMeUpdate ~/.hermes/skills/keep-me-update
+# 在会话中加载
+hermes --skills keep-me-update
 ```
+
+**方式二：从 ClawHub 安装（如果网络通）**
+
+```bash
+hermes skills install keep-me-update
+```
+
+**方式三：从 GitHub 原始 URL 安装**
+
+```bash
+hermes skills install https://raw.githubusercontent.com/Nemocccc/KeepMeUpdate/main/SKILL.md
+```
+
+安装后在会话中 `/reload-skills` 即可加载。
 
 ### 使用
 
