@@ -1,0 +1,9 @@
+{
+  "timezone": "Asia/Shanghai",
+  "delivery_time": "08:00",
+  "output_dir": "~/DailyENews",
+  "lookback_hours": 36,
+  "articles_per_feed": 18,
+  "model_timeout_seconds": 600,
+  "desktop_notification": true
+}

@@ -14,6 +14,7 @@ import re
 import sys
 import time
 import uuid
+from email.utils import parsedate_to_datetime
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
@@ -78,7 +79,8 @@ def clean_text(text):
 # ── Feed Database ─────────────────────────────────────────────────────────
 def load_feeds():
     if not os.path.exists(FEED_DB):
-        return []
+        with open(os.path.join(SCRIPT_DIR, 'rss_feeds.default.json'), encoding='utf-8') as f:
+            return json.load(f)
     with open(FEED_DB, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return data
@@ -167,6 +169,14 @@ def parse_date(date_str):
     if not date_str:
         return None
     date_str = date_str.strip()
+    for parser in (parsedate_to_datetime, lambda value: datetime.fromisoformat(value.replace('Z', '+00:00'))):
+        try:
+            dt = parser(date_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc).isoformat()
+        except (ValueError, TypeError):
+            pass
     # RFC 2822 (most common in RSS)
     patterns = [
         '%a, %d %b %Y %H:%M:%S %z',      # RFC 2822
@@ -181,7 +191,9 @@ def parse_date(date_str):
     for fmt in patterns:
         try:
             dt = datetime.strptime(date_str, fmt)
-            return dt.replace(tzinfo=None).isoformat() + 'Z'
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc).isoformat()
         except ValueError:
             continue
     return None
@@ -247,7 +259,7 @@ def parse_rss(xml_text, feed_url):
                     'title': title or '(无标题)',
                     'url': link or feed_url,
                     'summary': desc[:500] if desc else '',
-                    'date': pub_date or datetime.now(timezone.utc).isoformat(),
+                    'date': pub_date,
                     'author': author,
                     'guid': guid or link,
                     'categories': categories,
@@ -260,7 +272,8 @@ def parse_rss(xml_text, feed_url):
         for entry in entries:
             title = clean_text(
                 entry.findtext('{http://www.w3.org/2005/Atom}title', ''))
-            link_el = entry.find('{http://www.w3.org/2005/Atom}link')
+            link_el = next((el for el in entry.findall('{http://www.w3.org/2005/Atom}link')
+                            if el.get('rel', 'alternate') == 'alternate'), None)
             link = ''
             if link_el is not None:
                 link = link_el.get('href', '') or ''
@@ -287,8 +300,7 @@ def parse_rss(xml_text, feed_url):
                     'title': title or '(无标题)',
                     'url': link or '',
                     'summary': desc[:500] if desc else '',
-                    'date': (published or updated
-                             or datetime.now(timezone.utc).isoformat()),
+                    'date': published or updated,
                     'author': author,
                     'guid': entry_id or link,
                     'categories': [],
@@ -322,7 +334,7 @@ def parse_rss(xml_text, feed_url):
                     'title': title or '(无标题)',
                     'url': link or feed_url,
                     'summary': desc[:500] if desc else '',
-                    'date': pub_date or datetime.now(timezone.utc).isoformat(),
+                    'date': pub_date,
                     'author': author,
                     'guid': link or '',
                     'categories': categories,
@@ -342,7 +354,7 @@ def fetch_feed(feed):
         if error:
             return [], error
         # Sort by date descending, limit
-        articles.sort(key=lambda a: a.get('date', ''), reverse=True)
+        articles.sort(key=lambda a: a.get('date') or '', reverse=True)
         articles = articles[:MAX_ARTICLES_PER_FEED]
         return articles, None
     except HTTPError as e:
@@ -359,7 +371,7 @@ def check_feeds():
     feeds = load_feeds()
     results = []
     for feed in feeds:
-        if not feed['enabled']:
+        if not feed.get('enabled', True):
             continue
         url = feed['url']
         try:
@@ -477,7 +489,7 @@ def fetch_all(skip_read=False):
             continue
         unique_articles.append(a)
 
-    unique_articles.sort(key=lambda a: a.get('date', ''), reverse=True)
+    unique_articles.sort(key=lambda a: a.get('date') or '', reverse=True)
 
     now = datetime.now(timezone.utc)
     today_str = now.strftime('%Y-%m-%d')
@@ -533,6 +545,12 @@ def cmd_list():
 
 
 if __name__ == '__main__':
+    if '--feeds' in sys.argv:
+        index = sys.argv.index('--feeds')
+        if index + 1 >= len(sys.argv):
+            sys.exit('--feeds requires a JSON file path')
+        FEED_DB = os.path.abspath(os.path.expanduser(sys.argv[index + 1]))
+        del sys.argv[index:index + 2]
     if len(sys.argv) > 1:
         if sys.argv[1] == '--import-opml' and len(sys.argv) > 2:
             import_opml(sys.argv[2])

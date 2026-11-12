@@ -18,6 +18,7 @@ import time
 import urllib.request
 import urllib.error
 import ssl
+from urllib.parse import urlsplit
 
 # Known paywalled domains — 401/403 from these is expected, not a broken link
 PAYWALLED_DOMAINS = {
@@ -35,14 +36,16 @@ DEFAULT_TIMEOUT = 10
 SLOW_TIMEOUT = 15
 
 def get_timeout(url: str) -> int:
+    host = (urlsplit(url).hostname or '').lower()
     for domain in SLOW_DOMAINS:
-        if domain in url:
+        if host == domain or host.endswith('.' + domain):
             return SLOW_TIMEOUT
     return DEFAULT_TIMEOUT
 
 def is_paywalled(url: str) -> bool:
+    host = (urlsplit(url).hostname or '').lower()
     for domain in PAYWALLED_DOMAINS:
-        if domain in url:
+        if host == domain or host.endswith('.' + domain):
             return True
     return False
 
@@ -82,16 +85,15 @@ def main():
         print(f"ERROR: File not found: {filepath}", file=sys.stderr)
         sys.exit(1)
 
-    urls = set(re.findall(r'https?://[^\s\)\[\]》<>\"\']+', content))
+    urls = re.findall(r'https?://[^\s\)\[\]》<>\"\']+', content)
     if not urls:
         print("No URLs found in file.")
         sys.exit(0)
 
-    # Check for duplicate URLs (case-insensitive)
-    lower_urls = [u.lower() for u in urls]
-    if len(lower_urls) != len(set(lower_urls)):
+    # Preserve occurrences; URL paths and query values are case-sensitive.
+    if len(urls) != len(set(urls)):
         from collections import Counter
-        dups = [u for u, c in Counter(lower_urls).items() if c > 1]
+        dups = [u for u, c in Counter(urls).items() if c > 1]
         print(f"\n❌ DUPLICATE URLS: {dups}")
         print("Different stories sharing the same link — fix before delivery.\n")
         sys.exit(1)

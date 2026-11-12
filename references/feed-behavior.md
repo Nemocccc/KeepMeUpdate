@@ -1,41 +1,13 @@
-# RSS Feed Behavior Reference
+# 来源与证据边界
 
-> Known patterns observed across KeepMeUpdate runs. Update as new quirks emerge.
+通用日报默认源在 `scripts/newspaper_feeds.default.json`，原科技源集合继续保存在 `scripts/rss_feeds.default.json`，可通过 `feeds_path` 选用。
 
-## Consistently Problematic Feeds
+RSS / Atom 可用性随时间、地区变化。以每次 `sources.json` 中的实际抓取状态为准，旧的成功率或条数不作为本次预期。单个源失败不阻止其他源产出；缺少某一领域的证据时披露覆盖不足。
 
-| Feed | Symptom | Cause | Impact |
-|------|---------|-------|--------|
-| r/unixporn | HTTP 429 | Reddit rate limiting | Always fails, ignore |
-| Linux Reddit (r/linux) | Occasional HTTP 429 | Reddit rate limiting | Sometimes succeeds, don't pre-discount |
-| 爱范儿 (ifanr) | SSL wrong version | Server-side TLS issue | Intermittent, retry helps |
+采集时将带时区的发布时间转换成 UTC；无时区时间暂按 UTC；缺失或无法解析的日期保持未知，不替换成抓取时间。自动日报仅接收窗口内、发布时间明确的条目。链接中的跟踪参数只用于去重时归一化，发表仍使用源返回的原始链接。
 
-## arXiv cs.AI — Known Delay
+RSS常只有短摘要，报纸应表述为“据某媒体报道”，不声称已阅读全文或独立核实。模型返回候选ID及摘录，程序核对ID和摘录确实来自本次源数据，再回填链接。这检验来源关联，不能自动证明摘要中的每个事实；编辑仍须限制推断。
 
-arXiv feed frequently returns `count: 0` on the **first fetch of a day** because its RSS updates later than other feeds. On a re-fetch (after `--mark-read` + `--skip-read`) it typically returns 10 articles.
+同一事件由模型合并，URL相同的候选在采集时去重。社区热榜、GitHub Trending与论文列表不天然等于社会新闻，适合用户明确要求的技术专题。
 
-**Signal**: If `total_articles` < 50 and `arxiv_retry: true`, a re-fetch is worthwhile.
-
-## Feed Count Expectations
-
-Healthy run (all feeds populated):
-- **60-85 new articles** (skipping already-read ones)
-- **24-27 feeds reporting data** out of 28
-- arXiv adds +10 when it's populated
-
-## HN --fetch URL Trap
-
-`search_web_stdlib.py --fetch` on HN returns **no URLs** — only titles, domains, and scores. Each story lacks both its original URL and its HN discussion URL. This creates a strong hallucination risk where agents invent `item?id=XXXXXXXX` links.
-
-**Rule**: HN --fetch titles are search clues only. Cross-reference against RSS cache or web_search for verified URLs before inclusion.
-
-## Lobsters / Aggregator Domain Mismatch
-
-Lobsters, Linux Reddit, and similar aggregator feeds return the **original article URL** (e.g., `omgubuntu.co.uk`, `github.com`), not the aggregator's own discussion page. The `source` field must reflect the URL's actual domain, not the aggregator name.
-
-## Date Awareness
-
-- RSS cache files are named `articles_YYYY-MM-DD.json` by UTC fetch time
-- **Always use `datetime.now(TZ)` for the output date**, not the cache file name
-- Previous runs' cache from "yesterday" may persist — still use current CST date
-- User may trigger the skill after midnight CST — the cache name lags behind
+搜索补充时保存搜索结果或原文证据及原始URL。`search_web_stdlib.py --fetch` 的纯文本不保留完整链接，只能作为进一步搜索线索，不可据标题猜链接。付费墙或反爬状态不等于报道不存在，应分别记录来源证据和访问状态。
