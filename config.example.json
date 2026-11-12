@@ -36,5 +36,7 @@
     "new open source developer tools GitHub programming",
     "technology chip hardware gadgets launches",
     "cybersecurity cloud Linux developer news"
-  ]
+  ],
+  "discovery_enabled": true,
+  "discovery_lookback_days": 365
 }

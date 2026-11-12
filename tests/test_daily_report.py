@@ -92,6 +92,43 @@ class NewsTests(unittest.TestCase):
             self.assertIn('2026-11/2026-11-12/新闻报纸.md', (output / '往期报纸/目录.md').read_text())
             self.assertEqual(sorted(p.name for p in output.iterdir() if not p.name.startswith('.')), ['今日报纸.html', '今日报纸.md', '往期报纸'])
 
+    def discovery(self):
+        return dict(id='d001', medium='音乐', headline='一张值得听的专辑', summary='有现场空间感的录音',
+            why='可以留意乐器的远近关系', activity='打开来源听一段', work_period='作品年份未注明', evidence_quote='Live album')
+
+    def test_discoveries_have_independent_evidence_and_can_support_outlook(self):
+        evidence = self.evidence()
+        evidence['discoveries'] = [dict(id='d001',title='Live album',evidence='A live album recorded in a hall',
+            url='https://example.org/album',source='example.org',feed='Music',published_at=None)]
+        digest = self.digest()
+        digest['discoveries'] = [self.discovery()]
+        digest['outlook'] = [dict(evidence_ids=['d001'])]
+        result=report.validate(digest,evidence)
+        self.assertEqual(result['discoveries'][0]['url'],'https://example.org/album')
+        digest['discoveries'][0]['id']='invented'
+        with self.assertRaises(ValueError): report.validate(digest,evidence)
+
+    def test_discovery_rejects_unsupported_quote(self):
+        evidence=self.evidence()
+        evidence['discoveries']=[dict(id='d001',title='Live album',evidence='Recorded live')]
+        digest=self.digest();digest['discoveries']=[self.discovery()]
+        digest['discoveries'][0]['evidence_quote']='Made up track'
+        with self.assertRaises(ValueError):report.validate(digest,evidence)
+
+    def test_discovery_render_marks_unknown_period_and_separates_news(self):
+        evidence=self.evidence()
+        evidence.update(cutoff='2026-11-11',fetched_at='2026-11-12',feeds=[])
+        evidence['discoveries']=[dict(id='d001',title='Live album',evidence='A live album',
+            url='https://example.org/album',source='example.org',feed='Music',published_at=None)]
+        digest=self.digest();digest['discoveries']=[self.discovery()]
+        result=report.validate(digest,evidence)
+        for item in result['articles']+result['discoveries']:item['link_check']=dict(status=200,ok=True)
+        page,markdown=report.render(result,evidence,datetime(2026,11,12,tzinfo=timezone.utc))
+        self.assertIn('非新闻',page)
+        self.assertIn('作品年份未注明',markdown)
+        self.assertIn('来源发表于 未注明',markdown)
+        self.assertIn('https://example.org/album',page)
+
     def test_reader_sections_restrict_selection(self):
         digest = self.digest()
         for item in digest['articles']: item['section'] = '我的开源发现'

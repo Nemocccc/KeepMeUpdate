@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Bandcamp Daily",
+    "url": "https://daily.bandcamp.com/feed",
+    "category": "音乐"
+  },
+  {
+    "title": "Colossal",
+    "url": "https://www.thisiscolossal.com/feed/",
+    "category": "视觉艺术"
+  },
+  {
+    "title": "Skwigly",
+    "url": "https://www.skwigly.co.uk/feed/",
+    "category": "影像与游戏"
+  },
+  {
+    "title": "designboom",
+    "url": "https://www.designboom.com/feed/",
+    "category": "建筑与生活"
+  },
+  {
+    "title": "itch.io精选游戏",
+    "url": "https://itch.io/feed/featured.xml",
+    "category": "影像与游戏"
+  },
+  {
+    "title": "It’s Nice That",
+    "url": "https://feeds2.feedburner.com/itsnicethat/SlXC",
+    "category": "视觉艺术"
+  }
+]
