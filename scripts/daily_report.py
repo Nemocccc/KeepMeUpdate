@@ -225,18 +225,28 @@ def notify(title, text):
 
 def refresh_reading_entry(output):
     archive = output / '往期报纸'
-    editions = sorted((p for p in archive.glob('????-??-??') if (p / '新闻报纸.md').exists()), reverse=True)
+    editions = sorted((p for p in archive.glob('????-??/????-??-??') if (p / '新闻报纸.md').exists()), reverse=True)
     if not editions:
         return
     latest = editions[0]
-    introduction = (f'> **每天看这一份即可。** 本期：{latest.name}。\n> '
-                    f'[打开网页版](往期报纸/{latest.name}/网页版.html) · [查看往期报纸](往期报纸/目录.md)\n\n')
-    temp = output / '.今日报纸.tmp'
-    temp.write_text(introduction + (latest / '新闻报纸.md').read_text(), encoding='utf-8')
-    temp.replace(output / '今日报纸.md')
-    index = '# 往期报纸\n\n按日期倒序排列。每天阅读根目录的“今日报纸.md”即可。\n\n'
-    index += '\n'.join(f'- [{edition.name}]({edition.name}/新闻报纸.md) · [网页版]({edition.name}/网页版.html)' for edition in editions)
-    (archive / '目录.md').write_text(index + '\n', encoding='utf-8')
+    introduction = (f'> **本期：{latest.name}。**\n> '
+                    '[打开今日网页版](今日报纸.html) · [查看往期报纸](往期报纸/目录.md)\n\n')
+    for name, content in [
+        ('今日报纸.md', introduction + (latest / '新闻报纸.md').read_text()),
+        ('今日报纸.html', (latest / '网页版.html').read_text()),
+    ]:
+        temp = output / ('.' + name + '.tmp')
+        temp.write_text(content, encoding='utf-8')
+        temp.replace(output / name)
+    index = '# 往期报纸\n\n按月份归档，每月内按日期倒序排列。\n'
+    month = None
+    for edition in editions:
+        if edition.parent.name != month:
+            month = edition.parent.name
+            index += f'\n## {month}\n\n'
+        relative = edition.relative_to(archive).as_posix()
+        index += f'- [{edition.name}]({relative}/新闻报纸.md) · [网页版]({relative}/网页版.html)\n'
+    (archive / '目录.md').write_text(index, encoding='utf-8')
 
 
 def organize_output(output):
@@ -245,12 +255,20 @@ def organize_output(output):
     runtime.mkdir(parents=True, exist_ok=True)
     archive = output / '往期报纸'
     archive.mkdir(exist_ok=True)
+    for old in sorted(archive.glob('????-??-??')):
+        if not old.is_dir():
+            continue
+        target = archive / old.name[:7] / old.name
+        target.parent.mkdir(exist_ok=True)
+        if target.exists():
+            raise FileExistsError(f'Migration target already exists: {target}')
+        old.rename(target)
     for old in sorted(output.glob('????-??-??')):
         if not old.is_dir():
             continue
         for source in list(old.iterdir()):
             report_name = {'report.md': '新闻报纸.md', 'report.html': '网页版.html'}.get(source.name)
-            target = (archive / old.name / report_name) if report_name else (runtime / old.name / source.name)
+            target = (archive / old.name[:7] / old.name / report_name) if report_name else (runtime / old.name / source.name)
             target.parent.mkdir(parents=True, exist_ok=True)
             if target.exists():
                 raise FileExistsError(f'Migration target already exists: {target}')
@@ -292,7 +310,7 @@ def main():
             return
         organize_output(output)
         daily = runtime / now.strftime('%Y-%m-%d')
-        edition = output / '往期报纸' / now.strftime('%Y-%m-%d')
+        edition = output / '往期报纸' / now.strftime('%Y-%m') / now.strftime('%Y-%m-%d')
         if not args.force and (daily / 'success.json').exists():
             print(f'Already published: {output / "今日报纸.md"}')
             return

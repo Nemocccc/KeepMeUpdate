@@ -33,12 +33,14 @@ python3 scripts/install_local.py --config user_config.json
 
 ```text
 output_dir/
-├── 今日报纸.md               # 每天只需打开这一份
+├── 今日报纸.md               # Typora 阅读入口
+├── 今日报纸.html             # 浏览器阅读入口
 ├── 往期报纸/
 │   ├── 目录.md
-│   └── YYYY-MM-DD/
-│       ├── 新闻报纸.md
-│       └── 网页版.html
+│   └── YYYY-MM/
+│       └── YYYY-MM-DD/
+│           ├── 新闻报纸.md
+│           └── 网页版.html
 └── .运行记录/               # 隐藏的来源数据、日志、运行状态
     ├── cron.log
     ├── last-run.json

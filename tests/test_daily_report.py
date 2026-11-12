@@ -86,7 +86,23 @@ class NewsTests(unittest.TestCase):
             self.assertEqual((output / '.运行记录/2026-11-12/sources.json').read_text(), '{"evidence": true}')
             self.assertEqual((output / '.运行记录/cron.log').read_text(), '历史日志')
             self.assertFalse(old.exists())
-            self.assertEqual(sorted(p.name for p in output.iterdir() if not p.name.startswith('.')), ['今日报纸.md', '往期报纸'])
+            self.assertEqual((output / '今日报纸.html').read_text(), '<h1>原有报纸</h1>')
+            self.assertTrue((output / '往期报纸/2026-11/2026-11-12/新闻报纸.md').exists())
+            self.assertIn('2026-11/2026-11-12/新闻报纸.md', (output / '往期报纸/目录.md').read_text())
+            self.assertEqual(sorted(p.name for p in output.iterdir() if not p.name.startswith('.')), ['今日报纸.html', '今日报纸.md', '往期报纸'])
+
+    def test_existing_flat_archive_moves_into_month(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            old = output / '往期报纸/2026-11-12'
+            old.mkdir(parents=True)
+            (old / '新闻报纸.md').write_text('# 保留正文')
+            (old / '网页版.html').write_text('<p>保留网页版</p>')
+            report.organize_output(output)
+            report.organize_output(output)
+            self.assertFalse(old.exists())
+            self.assertIn('保留正文', (output / '今日报纸.md').read_text())
+            self.assertEqual((output / '往期报纸/2026-11/2026-11-12/网页版.html').read_text(), '<p>保留网页版</p>')
 
     def test_cron_uses_absolute_paths_and_restores_timezone(self):
         existing='CRON_TZ=UTC\n0 * * * * rclone sync source dest\n'
