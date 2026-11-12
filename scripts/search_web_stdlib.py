@@ -18,6 +18,7 @@ import html
 import json
 import ssl
 import sys
+from html.parser import HTMLParser
 
 
 def _ua():
@@ -42,7 +43,9 @@ def search(query: str, n: int = 8) -> list[dict]:
         m_a = re.search(r'<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>(.*?)</a>', b, re.S)
         m_s = re.search(r'<a[^>]+class="result__snippet"[^>]*>(.*?)</a>', b, re.S)
         if m_a:
-            href = html.unescape(m_a.group(1))
+            href = urllib.parse.urljoin("https://duckduckgo.com", html.unescape(m_a.group(1)))
+            query_params = urllib.parse.parse_qs(urllib.parse.urlsplit(href).query)
+            href = query_params.get('uddg', [href])[0]
             title = re.sub(r"<[^>]+>", "", m_a.group(2)).strip()
             snip = re.sub(r"<[^>]+>", "", m_s.group(1)).strip() if m_s else ""
             results.append({
@@ -55,11 +58,45 @@ def search(query: str, n: int = 8) -> list[dict]:
     return results
 
 
+class PublicationMetadata(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.value = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        field = attrs.get('property', attrs.get('name', attrs.get('itemprop', ''))).lower()
+        if tag == 'meta' and field in ('article:published_time', 'datepublished', 'date', 'pubdate'):
+            self.value = self.value or attrs.get('content')
+
+
+def publication_date(data):
+    metadata = PublicationMetadata()
+    metadata.feed(data)
+    if metadata.value:
+        return metadata.value
+    for block in re.findall(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', data, re.S | re.I):
+        try:
+            root = json.loads(block)
+        except ValueError:
+            continue
+        def find(value):
+            if isinstance(value, dict):
+                if isinstance(value.get('datePublished'), str): return value['datePublished']
+                return next((result for child in value.values() if (result := find(child))), None)
+            if isinstance(value, list):
+                return next((result for child in value if (result := find(child))), None)
+        found = find(root)
+        if found: return found
+    return None
+
+
 def fetch_url(url: str, max_chars: int = 8000) -> dict:
     """Fetch a URL and extract title + main text. Strips script/style/nav/footer."""
     req = urllib.request.Request(url, headers={"User-Agent": _ua()})
     with urllib.request.urlopen(req, timeout=20, context=_ctx()) as r:
         data = r.read().decode("utf-8", "ignore")
+    published_at = publication_date(data)
     m_title = re.search(r"<title[^>]*>(.*?)</title>", data, re.S | re.I)
     title = html.unescape(re.sub(r"<[^>]+>", "", m_title.group(1)).strip()) if m_title else ""
     # strip noise
@@ -76,6 +113,7 @@ def fetch_url(url: str, max_chars: int = 8000) -> dict:
         "url": url,
         "title": title,
         "content": text[:max_chars],
+        "published_at": published_at,
     }
 
 

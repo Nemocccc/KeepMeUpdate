@@ -1,6 +1,6 @@
 # 来源与证据边界
 
-通用日报默认源在 `scripts/newspaper_feeds.default.json`，原科技源集合继续保存在 `scripts/rss_feeds.default.json`，可通过 `feeds_path` 选用。
+日报默认源在 `scripts/newspaper_feeds.default.json`，已沿用原仓库 `scripts/rss_feeds.default.json` 的28个科技/AI/极客订阅。按用户既有兴趣采集，不再使用综合政治社会新闻源。可通过 `feeds_path` 自定义。
 
 RSS / Atom 可用性随时间、地区变化。以每次 `sources.json` 中的实际抓取状态为准，旧的成功率或条数不作为本次预期。单个源失败不阻止其他源产出；缺少某一领域的证据时披露覆盖不足。
 

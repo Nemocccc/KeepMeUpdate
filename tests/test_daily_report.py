@@ -11,6 +11,7 @@ import daily_report as report
 import install_local
 import rss_fetch
 from verify_links import is_paywalled
+from search_web_stdlib import publication_date
 
 
 class NewsTests(unittest.TestCase):
@@ -90,6 +91,18 @@ class NewsTests(unittest.TestCase):
             self.assertTrue((output / '往期报纸/2026-11/2026-11-12/新闻报纸.md').exists())
             self.assertIn('2026-11/2026-11-12/新闻报纸.md', (output / '往期报纸/目录.md').read_text())
             self.assertEqual(sorted(p.name for p in output.iterdir() if not p.name.startswith('.')), ['今日报纸.html', '今日报纸.md', '往期报纸'])
+
+    def test_reader_sections_restrict_selection(self):
+        digest = self.digest()
+        for item in digest['articles']: item['section'] = '我的开源发现'
+        self.assertEqual(len(report.validate(digest, self.evidence(), ['我的开源发现'])['articles']), 3)
+        with self.assertRaises(ValueError): report.validate(digest, self.evidence())
+        self.assertEqual(report.schema(['n001'], ['我的开源发现'])['properties']['articles']['items']['properties']['section']['enum'], ['我的开源发现'])
+
+    def test_search_requires_publication_metadata(self):
+        self.assertIsNone(publication_date('<title>Yesterday in the news</title>'))
+        self.assertEqual(publication_date('<meta content="2026-11-12T08:00:00+08:00" property="article:published_time">'), '2026-11-12T08:00:00+08:00')
+        self.assertEqual(publication_date('<script type="application/ld+json">{"@graph":[{"datePublished":"2026-11-12"}]}</script>'), '2026-11-12')
 
     def test_existing_flat_archive_moves_into_month(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -5,5 +5,36 @@
   "lookback_hours": 36,
   "articles_per_feed": 18,
   "model_timeout_seconds": 600,
-  "desktop_notification": true
+  "desktop_notification": true,
+  "reader_profile": {
+    "basis": "沿用本仓库原始订阅和选题，保持原有科技/AI/极客资讯兴趣。工作项目不作为阅读偏好。",
+    "interests": [
+      "AI新模型、研究进展、机器人与前沿技术",
+      "GitHub热门开源项目、编程语言、框架与开发工具",
+      "Linux、自由软件、Web技术、云计算与基础设施",
+      "科技公司、新产品、融资、收购与产业动态",
+      "芯片、手机、电脑、消费电子与新能源数码",
+      "Hacker News、Lobsters、V2EX、少数派与技术博客中的极客发现"
+    ],
+    "exclude": [
+      "政治与战争",
+      "一般社会新闻",
+      "娱乐八卦",
+      "纯促销软文"
+    ],
+    "selection_rule": "按原有科技与极客兴趣筛选有新意的进展；兼顾新模型、新开源项目、新硬件。不要按当前工作项目专门搜集产线或业务情报。"
+  },
+  "sections": [
+    "今日头条",
+    "AI前沿",
+    "极客开源",
+    "科技公司",
+    "硬件与数码"
+  ],
+  "search_queries": [
+    "latest AI model open source research news",
+    "new open source developer tools GitHub programming",
+    "technology chip hardware gadgets launches",
+    "cybersecurity cloud Linux developer news"
+  ]
 }

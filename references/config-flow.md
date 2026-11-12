@@ -2,6 +2,9 @@
 
 配置为 JSON，独立于 skill checkout，路径 `~/.config/keep-me-update/config.json`。`config.example.json` 提供字段示例。旧版本的 `user_config.yaml` 可以作为迁移信息，但当前脚本不会读取 YAML，迁移时按用户原设置写入 JSON。
 
+- `reader_profile`：读者兴趣、排除领域、选题依据。已有订阅优先，用户明确更改时再调整；工作内容不自动视作阅读兴趣。
+- `sections`：报纸板块，默认今日头条、AI前沿、极客开源、科技公司、硬件与数码。
+- `search_queries`：专题搜索词；搜索结果需原页面提供可解析的发布时间才进入当日报纸。
 - `timezone`：IANA 时区，默认 Asia/Shanghai。
 - `delivery_time`：HH:MM，默认 08:00。修改后重新运行安装器更新 cron。
 - `output_dir`：本地报纸目录。
