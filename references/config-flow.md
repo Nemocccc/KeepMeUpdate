@@ -25,4 +25,4 @@ python3 scripts/daily_report.py
 
 cron 网络需要代理时配置 `proxy_url`，不把凭据提交到仓库。桌面通知连接当前用户的 D-Bus 会话，未登录桌面时文件仍会生成。模型编辑需有效的 Codex 登录和可用额度。
 
-安装器备份初始 crontab 至配置目录，更新有标记的任务，保留其他任务。查看 `crontab -l` 与输出目录的 `cron.log`。停用时只删除 `BEGIN keep-me-update` 至 `END keep-me-update` 标记内的块，保留其余 crontab。
+安装器备份初始 crontab 至配置目录，更新有标记的任务，保留其他任务。查看 `crontab -l` 与输出目录的 `.运行记录/cron.log`。停用时只删除 `BEGIN keep-me-update` 至 `END keep-me-update` 标记内的块，保留其余 crontab。

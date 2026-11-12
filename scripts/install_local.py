@@ -54,7 +54,7 @@ def main():
         raise RuntimeError(result.stderr.strip())
     previous = result.stdout
     cleaned = re.sub(r'(?m)^' + re.escape(BEGIN) + r'\n.*?^' + re.escape(END) + r'\n?', '', previous, flags=re.S)
-    block = cron_block(cleaned, config, path, output / 'cron.log')
+    block = cron_block(cleaned, config, path, output / '.运行记录/cron.log')
     updated = cleaned.rstrip() + '\n\n' + block + '\n'
     print(updated)
     if args.dry_run:
@@ -63,6 +63,7 @@ def main():
     if skill.exists() and skill.resolve() != ROOT:
         raise RuntimeError(f'Existing skill at {skill}; choose how to migrate it before replacing')
     output.mkdir(parents=True, exist_ok=True)
+    (output / '.运行记录').mkdir(exist_ok=True)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + '\n')
     os.chmod(path, 0o600)

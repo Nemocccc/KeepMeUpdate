@@ -1,4 +1,5 @@
 import copy
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -67,6 +68,25 @@ class NewsTests(unittest.TestCase):
         with patch.object(report,'check_url',side_effect=statuses): result=report.check_links(digest)
         self.assertEqual(len(result['articles']),3)
         self.assertEqual(result['outlook'],[])
+
+    def test_migration_preserves_reports_and_hides_operational_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            old = output / '2026-11-12'
+            old.mkdir()
+            (old / 'report.md').write_text('# 原有新闻与机会分析')
+            (old / 'report.html').write_text('<h1>原有报纸</h1>')
+            (old / 'sources.json').write_text('{"evidence": true}')
+            (old / 'success.json').write_text('{}')
+            (output / 'latest.md').write_text('旧入口')
+            (output / 'cron.log').write_text('历史日志')
+            report.organize_output(output)
+            report.organize_output(output)
+            self.assertIn('原有新闻与机会分析', (output / '今日报纸.md').read_text())
+            self.assertEqual((output / '.运行记录/2026-11-12/sources.json').read_text(), '{"evidence": true}')
+            self.assertEqual((output / '.运行记录/cron.log').read_text(), '历史日志')
+            self.assertFalse(old.exists())
+            self.assertEqual(sorted(p.name for p in output.iterdir() if not p.name.startswith('.')), ['今日报纸.md', '往期报纸'])
 
     def test_cron_uses_absolute_paths_and_restores_timezone(self):
         existing='CRON_TZ=UTC\n0 * * * * rclone sync source dest\n'

@@ -33,15 +33,16 @@ python3 scripts/install_local.py --config user_config.json
 
 ```text
 output_dir/
-├── latest.html / latest.md
-├── cron.log
-├── last-run.json
-└── YYYY-MM-DD/
-    ├── report.html / report.md
-    ├── digest.json
-    ├── sources.json
-    ├── editor.log
-    └── success.json
+├── 今日报纸.md               # 每天只需打开这一份
+├── 往期报纸/
+│   ├── 目录.md
+│   └── YYYY-MM-DD/
+│       ├── 新闻报纸.md
+│       └── 网页版.html
+└── .运行记录/               # 隐藏的来源数据、日志、运行状态
+    ├── cron.log
+    ├── last-run.json
+    └── YYYY-MM-DD/
 ```
 
 同一天成功后重复运行会跳过；重做用 `--force`。已安装后手动生成：`python3 scripts/daily_report.py`。配置说明见 [references/config-flow.md](references/config-flow.md)。本机配置、运行数据与凭据不会提交到仓库。

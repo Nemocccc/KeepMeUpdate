@@ -210,7 +210,7 @@ def render(digest, evidence, now):
 <section class="outlook"><h2>趋势与机会 <small>分析推断 / 待验证</small></h2><p>从本期事实出发，寻找值得验证的方向。以下判断带有不确定性。</p><div class="columns">{''.join(ideas)}</div></section>
 <footer>取材窗口：{esc(evidence['cutoff'])} — {esc(evidence['fetched_at'])}。RSS标题与摘要作为事实依据，未逐篇阅读全文；不代表完整覆盖全部新闻。
 <details><summary>数据源运行状态（{len(failures)} 个异常）</summary><ul>{issues or '<li>所有源抓取成功。</li>'}</ul></details></footer></main></body></html>'''
-    markdown.extend(['---', coverage, '', '取材于RSS标题与摘要，未逐篇阅读全文；来源异常详见 sources.json。', ''])
+    markdown.extend(['---', coverage, '', '取材于RSS标题与摘要，未逐篇阅读全文；来源状态详见网页版页尾。', ''])
     return page, '\n'.join(markdown)
 
 
@@ -221,6 +221,49 @@ def notify(title, text):
     env.setdefault('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')
     env.setdefault('DBUS_SESSION_BUS_ADDRESS', f'unix:path={env["XDG_RUNTIME_DIR"]}/bus')
     subprocess.run(['notify-send', '--app-name=KeepMeUpdate', title, text], env=env, check=False, timeout=10)
+
+
+def refresh_reading_entry(output):
+    archive = output / '往期报纸'
+    editions = sorted((p for p in archive.glob('????-??-??') if (p / '新闻报纸.md').exists()), reverse=True)
+    if not editions:
+        return
+    latest = editions[0]
+    introduction = (f'> **每天看这一份即可。** 本期：{latest.name}。\n> '
+                    f'[打开网页版](往期报纸/{latest.name}/网页版.html) · [查看往期报纸](往期报纸/目录.md)\n\n')
+    temp = output / '.今日报纸.tmp'
+    temp.write_text(introduction + (latest / '新闻报纸.md').read_text(), encoding='utf-8')
+    temp.replace(output / '今日报纸.md')
+    index = '# 往期报纸\n\n按日期倒序排列。每天阅读根目录的“今日报纸.md”即可。\n\n'
+    index += '\n'.join(f'- [{edition.name}]({edition.name}/新闻报纸.md) · [网页版]({edition.name}/网页版.html)' for edition in editions)
+    (archive / '目录.md').write_text(index + '\n', encoding='utf-8')
+
+
+def organize_output(output):
+    """Migrate existing reports without discarding source material or run logs."""
+    runtime = output / '.运行记录'
+    runtime.mkdir(parents=True, exist_ok=True)
+    archive = output / '往期报纸'
+    archive.mkdir(exist_ok=True)
+    for old in sorted(output.glob('????-??-??')):
+        if not old.is_dir():
+            continue
+        for source in list(old.iterdir()):
+            report_name = {'report.md': '新闻报纸.md', 'report.html': '网页版.html'}.get(source.name)
+            target = (archive / old.name / report_name) if report_name else (runtime / old.name / source.name)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                raise FileExistsError(f'Migration target already exists: {target}')
+            source.rename(target)
+        old.rmdir()
+    for name in ('latest.md', 'latest.html', 'last-run.json', 'cron.log', '.run.lock'):
+        source = output / name
+        if source.exists():
+            target = runtime / ('legacy-' + name if name.startswith('latest') or name == '.run.lock' else name)
+            if target.exists():
+                raise FileExistsError(f'Migration target already exists: {target}')
+            source.rename(target)
+    refresh_reading_entry(output)
 
 
 def main():
@@ -239,15 +282,19 @@ def main():
         return
     output = Path(config.get('output_dir', '~/DailyENews')).expanduser()
     output.mkdir(parents=True, exist_ok=True)
-    with (output / '.run.lock').open('w') as lock:
+    runtime = output / '.运行记录'
+    runtime.mkdir(exist_ok=True)
+    with (runtime / '.run.lock').open('w') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             print('Another report is already running; skipped.')
             return
-        daily = output / now.strftime('%Y-%m-%d')
+        organize_output(output)
+        daily = runtime / now.strftime('%Y-%m-%d')
+        edition = output / '往期报纸' / now.strftime('%Y-%m-%d')
         if not args.force and (daily / 'success.json').exists():
-            print(f'Already published: {daily}')
+            print(f'Already published: {output / "今日报纸.md"}')
             return
         daily.mkdir(exist_ok=True)
         evidence = collect(config, now)
@@ -262,19 +309,17 @@ def main():
             digest = check_links(validate(edit(config, evidence, work), evidence))
             page, markdown = render(digest, evidence, now)
             write_json(daily / 'digest.json', digest)
-            (daily / 'report.html').write_text(page, encoding='utf-8')
-            (daily / 'report.md').write_text(markdown, encoding='utf-8')
-            for name, content in [('latest.html', page), ('latest.md', markdown)]:
-                temp = output / (name + '.tmp')
-                temp.write_text(content, encoding='utf-8')
-                temp.replace(output / name)
+            edition.mkdir(parents=True, exist_ok=True)
+            (edition / '网页版.html').write_text(page, encoding='utf-8')
+            (edition / '新闻报纸.md').write_text(markdown, encoding='utf-8')
+            refresh_reading_entry(output)
             write_json(daily / 'success.json', dict(generated_at=now.isoformat(), articles=len(digest['articles'])))
-            write_json(output / 'last-run.json', dict(status='success', date=now.date().isoformat(), path=str(daily)))
-            print(f'Published: {daily / "report.html"}', flush=True)
+            write_json(runtime / 'last-run.json', dict(status='success', date=now.date().isoformat(), path=str(edition)))
+            print(f'Published: {output / "今日报纸.md"}', flush=True)
             if config.get('desktop_notification', True):
-                notify('今日报纸已生成', str(daily / 'report.html'))
+                notify('今日报纸已生成', str(output / '今日报纸.md'))
         except Exception as exc:
-            write_json(output / 'last-run.json', dict(status='failed', date=now.date().isoformat(), error=str(exc)))
+            write_json(runtime / 'last-run.json', dict(status='failed', date=now.date().isoformat(), error=str(exc)))
             raise
         finally:
             # Keep model logs with this edition to make scheduled failures diagnosable.
@@ -290,5 +335,5 @@ if __name__ == '__main__':
         main()
     except Exception as exc:
         print(f'KeepMeUpdate failed: {exc}', file=sys.stderr)
-        notify('日报生成失败', f'{exc}\n请检查 cron.log；上一期报纸仍然保留。')
+        notify('日报生成失败', f'{exc}\n请检查 .运行记录/cron.log；上一期报纸仍然保留。')
         sys.exit(1)
